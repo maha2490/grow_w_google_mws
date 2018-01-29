@@ -19,40 +19,51 @@ IndexController.prototype._registerServiceWorker = function() {
   var indexController = this;
 
   navigator.serviceWorker.register('/sw.js').then(function(reg) {
-
-    if(!navigator.serviceWorker.controller) {
+    if (!navigator.serviceWorker.controller) {
       return;
     }
 
-    if(reg.waiting){
-      indexController._updateReady();
+    if (reg.waiting) {
+      indexController._updateReady(reg.waiting);
       return;
     }
 
-    if(reg.installing){
+    if (reg.installing) {
       indexController._trackInstalling(reg.installing);
       return;
     }
 
-    reg.addEventListener('updatefound', function(){
+    reg.addEventListener('updatefound', function() {
       indexController._trackInstalling(reg.installing);
-    })
+    });
   });
+
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    window.location.reload();
+  })
 };
 
 IndexController.prototype._trackInstalling = function(worker) {
   var indexController = this;
-
-  worker.addEventListener('statechange', function(){
-    if(worker.state === 'installed'){
-      indexController._updateReady();
+  worker.addEventListener('statechange', function() {
+    if (worker.state == 'installed') {
+      indexController._updateReady(worker);
     }
-  })
+  });
 };
 
-IndexController.prototype._updateReady = function() {
+IndexController.prototype._updateReady = function(worker) {
   var toast = this._toastsView.show("New version available", {
-    buttons: ['whatever']
+    buttons: ['refresh', 'dismiss']
+  });
+
+  toast.answer.then(function(answer) {
+    if (answer != 'refresh'){
+      return;
+    } else {
+      // TODO: tell the service worker to skipWaiting
+      worker.postMessage({action: 'skipWaiting'});
+    }
   });
 };
 

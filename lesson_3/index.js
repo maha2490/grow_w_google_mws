@@ -1,8 +1,8 @@
-var newCacheToUse = 'wittr-static-v2';
+var staticCacheName = 'wittr-static-v3';
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(newCacheToUse).then(function(cache) {
+    caches.open(staticCacheName).then(function(cache) {
       return cache.addAll([
         '/',
         'js/main.js',
@@ -17,16 +17,13 @@ self.addEventListener('install', function(event) {
 
 self.addEventListener('activate', function(event) {
   event.waitUntil(
-    // can delete 1 specific cache, use w/o var at top
-    // caches.delete('wittr-static-v1')
-
-    // better to delete whatev old cache user has
-    caches.keys().then(function(cacheNames){
+    caches.keys().then(function(cacheNames) {
       return Promise.all(
-        cacheNames.filter(function(cacheName){
-          return cacheName.startsWith('wittr-') && cacheName != newCacheToUse;
-        }).map(function(cacheName){
-          return cache.delete(cacheName);
+        cacheNames.filter(function(cacheName) {
+          return cacheName.startsWith('wittr-') &&
+                 cacheName != staticCacheName;
+        }).map(function(cacheName) {
+          return caches.delete(cacheName);
         })
       );
     })
@@ -40,3 +37,11 @@ self.addEventListener('fetch', function(event) {
     })
   );
 });
+
+// TODO: listen for the "message" event, and call
+//   skipWaiting if you get the appropriate message
+self.addEventListener('message', function(event){
+  if(event.data.action === 'skipWaiting'){
+    self.skipWaiting();
+  }
+})
