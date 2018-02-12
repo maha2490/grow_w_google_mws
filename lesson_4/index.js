@@ -49,6 +49,11 @@ self.addEventListener('fetch', function(event) {
       event.respondWith(servePhoto(event.request));
       return;
     }
+
+    if (requestUrl.pathname.startsWith('/avatars/')){
+      event.respondWith(serveAvatar(event.request));
+      return;
+    }
   }
 
   event.respondWith(
@@ -58,19 +63,33 @@ self.addEventListener('fetch', function(event) {
   );
 });
 
+function serveAvatar(request) {
+  var storageUrl = request.url.replace(/-\dx\.jpg$/, '');
+  // open cache
+  return caches.open(contentImgsCache).then(function(cache){
+    // look for a request match
+    return cache.match(storageUrl).then(function(response){
+      // do a network fetch for the avatar
+      var networkFetch = fetch(request).then(function(networkResponse){
+        // update cache if storageUrl present
+        cache.put(storageUrl, networkResponse.clone());
+        return networkResponse;
+      });
+      // network response returns a promise
+      // return cache response
+      return response || networkFetch;
+    });
+  });
+}
+
 function servePhoto(request) {
   var storageUrl = request.url.replace(/-\d+px\.jpg$/, '');
 
-  // open specific cache
-  return caches.open(contentImgsCache).then(function(cache){
-    // if cache has match return it
-    return cache.match(storageUrl).then(function(response){
-      if(response) return response;
+  return caches.open(contentImgsCache).then(function(cache) {
+    return cache.match(storageUrl).then(function(response) {
+      if (response) return response;
 
-      // else fetch request from netwok
-      // handle request by adding response to cache
-      // return response to browser
-      return fetch(request).then(function(networkResponse){
+      return fetch(request).then(function(networkResponse) {
         cache.put(storageUrl, networkResponse.clone());
         return networkResponse;
       });
